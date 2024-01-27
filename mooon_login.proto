@@ -6,6 +6,7 @@ package mooon_login;
 option go_package = "./mooon_login";
 
 // Cookie
+// 注意同 mooon_auth.proto 中的保持完全相同
 message Cookie {
   string name = 1;
   string value = 2;
