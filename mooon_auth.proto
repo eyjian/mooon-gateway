@@ -5,6 +5,13 @@ package mooon_auth;
 // 当 protoc-gen-go 版本大于 1.4.0 时需加上 go_package，否则编译报错“unable to determine Go import path for”
 option go_package = "./mooon_auth";
 
+// Cookie
+message Cookie {
+  string name = 1;
+  string value = 2;
+  string path = 3;
+}
+
 // 鉴权请求消息
 message AuthReq {
   string body = 1; // 鉴权请求体，建议为 json 格式的数据
