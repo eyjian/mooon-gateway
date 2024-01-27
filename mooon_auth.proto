@@ -1,4 +1,5 @@
 // Written by yijian on 2024/01/21
+// 注意本文中的 auth 为 authentication 的缩写，"鉴权"之意，而非 authorization 的缩写
 syntax = "proto3";
 package mooon_auth;
 
