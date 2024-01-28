@@ -1,33 +1,16 @@
+// Package middleware
+// Written by yijian on 2024/01/28
 package middleware
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/zrpc"
-	"google.golang.org/grpc/status"
+	"io"
 	"net/http"
-	"net/url"
 	"strings"
-
-	"gateway/loginclient"
-	"gateway/protoc/login"
 )
-
-// 登录服务客户端
-var loginClient loginclient.Login
-
-// NewLoginClient 实例化登录服务客户端
-func NewLoginClient() {
-	var loginConf zrpc.RpcClientConf
-
-	conf.MustLoad("etc/login.yaml", &loginConf)
-	// 注意如果这里失败会直接退出，因此在目标服务不可用时，总是退出。
-	// 如果不想退出，使用 zrpc.NewClient 替代 zrpc.MustNewClient。
-	// 实际上 zrpc.MustNewClient 只是包了下 zrpc.NewClient，增加了 Must 逻辑。
-	client := zrpc.MustNewClient(loginConf)
-	loginClient = loginclient.NewLogin(client)
-}
+import (
+	"mooon-gateway/mooonlogin"
+	"mooon-gateway/pb/mooon_login"
+)
 
 // LoginMiddleware 登录
 func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -35,40 +18,35 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
 			next.ServeHTTP(w, r)
 		} else {
-			var me MyError
-			var loginReq login.LoginReq
+			var loginReq mooon_login.LoginReq
+			var mooonLogin mooonlogin.MooonLogin
 
-			params, _ := url.ParseQuery(r.URL.RawQuery)
-			loginReq.Phone = params.Get("phone")
-			loginReq.VerificationCode = params.Get("verification_code")
-			fmt.Printf("Phone:%s, VerificationCode:%s\n", loginReq.Phone, loginReq.VerificationCode)
-			loginResp, err := loginClient.Login(r.Context(), &loginReq)
+			bodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
-				fmt.Println("login fail")
-				//fmt.Fprintln(w, err)
-				st, ok := status.FromError(err)
-				if ok {
-					fmt.Printf("%d", st.Code())
-					me.Code = uint32(st.Code())
-					me.Message = st.Message()
-				} else {
-					me.Code = 888899
-					me.Message = err.Error()
-				}
-				jsonStr, _ := json.Marshal(&me)
-				fmt.Fprintln(w, string(jsonStr))
+				return
 			} else {
-				cookie := &http.Cookie{ // 构造 cookie
-					Name:  "mysid",
-					Value: loginResp.SessionId,
-					Path:  "/",
+				defer r.Body.Close()
+
+				loginReq.Body = bodyBytes
+				loginResp, err := mooonLogin.Login(r.Context(), &loginReq)
+				if err == nil {
+					// 写 http 头
+					for name, value := range loginResp.HttpHeaders {
+						w.Header().Set(name, value)
+					}
+					// 写 cookies
+					for _, loginCookie := range loginResp.HttpCookies {
+						httpCookie := LoginCookie2HttpCookie(loginCookie)
+						http.SetCookie(w, httpCookie)
+					}
+					// 写响应体
+					if len(loginResp.Body) > 0 {
+						_, _ = w.Write(loginResp.Body) // 得放在最后
+					}
+					w.WriteHeader(http.StatusOK)
+				} else {
+					return
 				}
-				http.SetCookie(w, cookie) // 写 cookie
-				//fmt.Fprintln(w, "Cookie has been set")
-				me.Code = 0
-				me.Message = "login success"
-				jsonStr, _ := json.Marshal(&me)
-				fmt.Fprintln(w, string(jsonStr))
 			}
 		}
 	}

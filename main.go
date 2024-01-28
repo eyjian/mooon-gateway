@@ -28,9 +28,6 @@ func main() {
 	server.Use(wrapResponse)
 	defer server.Stop()
 
-	// 实例化登录服务客户端
-	middleware.NewLoginClient()
-
 	// 设置错误处理
 	httpx.SetErrorHandlerCtx(grpcErrorHandlerCtx)
 

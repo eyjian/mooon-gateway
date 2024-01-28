@@ -1,16 +1,15 @@
+// Package middleware
+// Written by yijian on 2024/01/28
 package middleware
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/zrpc"
-	"google.golang.org/grpc/status"
+	"io"
 	"net/http"
 	"strings"
-
-	"gateway/authclient"
-	"gateway/protoc/auth"
+)
+import (
+	"mooon-gateway/mooonauth"
+	"mooon-gateway/pb/mooon_auth"
 )
 
 // AuthMiddleware 鉴权
@@ -19,44 +18,34 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if !strings.HasPrefix(r.URL.Path, "/v2/") {
 			next.ServeHTTP(w, r)
 		} else {
-			var me MyError
+			var authReq mooon_auth.AuthReq
+			var mooonAuth mooonauth.MooonAuth
 
-			cookie, err := r.Cookie("mysid")
+			bodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
-				me.Code = 666699
-				me.Message = "no access in gateway.AuthMiddleware"
-				jsonStr, _ := json.Marshal(&me)
-				fmt.Fprintln(w, string(jsonStr))
+				return
 			} else {
-				// cookies 中有会话 ID
-				var authReq auth.AuthReq
-				var authConf zrpc.RpcClientConf
+				defer r.Body.Close()
 
-				conf.MustLoad("etc/auth.yaml", &authConf)
-				client := zrpc.MustNewClient(authConf)
-				authClient := authclient.NewAuth(client)
-
-				authReq.SessionId = cookie.Value
-				authResp, err := authClient.Authenticate(r.Context(), &authReq) // 调用鉴权服务
-				if err != nil {
-					// 未通过鉴权
-					st, ok := status.FromError(err)
-					if ok {
-						me.Code = uint32(st.Code())
-						me.Message = st.Message()
-					} else {
-						me.Code = 999988
-						me.Message = err.Error()
+				authReq.Body = bodyBytes
+				authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
+				if err == nil {
+					// 写 http 头
+					for name, value := range authResp.HttpHeaders {
+						w.Header().Set(name, value)
 					}
-					jsonStr, _ := json.Marshal(&me)
-					fmt.Fprintln(w, string(jsonStr))
+					// 写 cookies
+					for _, authCookie := range authResp.HttpCookies {
+						httpCookie := AuthCookie2HttpCookie(authCookie)
+						http.SetCookie(w, httpCookie)
+					}
+					// 写响应体
+					if len(authResp.Body) > 0 {
+						_, _ = w.Write(authResp.Body) // 得放在最后
+					}
+					w.WriteHeader(http.StatusOK)
 				} else {
-					// 通过鉴权
-					newReq := r.WithContext(r.Context())
-					newReq.Header.Set("Grpc-Metadata-myuid", authResp.UserId)
-
-					// 往下转发
-					next.ServeHTTP(w, newReq)
+					return
 				}
 			}
 		}

@@ -20,14 +20,14 @@ message Cookie {
 
 // 登录请求消息
 message LoginReq {
-  string body = 1; // 登录请求体，建议为 json 格式的数据
+  bytes body = 1; // 登录请求体，建议为 json 格式的数据
 }
 
 // 登录响应消息
 message LoginResp {
   repeated Cookie http_cookies = 1; // 写入 cookie 的数据，这些信息将传给鉴权服务
   map<string, string> http_headers = 2; // 写入 http 头的数据
-  string body = 3;
+  bytes body = 3;
 }
 
 // 登录（login）服务定义
