@@ -24,7 +24,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
 
-		if !strings.HasPrefix(r.URL.Path, "/v1/") {
+		if !strings.HasPrefix(r.URL.Path, "/v2/") {
 			next.ServeHTTP(w, r)
 		} else {
 			var authReq mooon_auth.AuthReq
