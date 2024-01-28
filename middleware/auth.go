@@ -33,8 +33,8 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			authReq.Body = reqBodyBytes
 			authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
 			if err != nil {
-				logc.Errorf(logCtx, "Call login failed: %s\n", err.Error())
-				responseBytes := NewResponseStr(logCtx, GwErrCallLogin, "call login error", nil)
+				logc.Errorf(logCtx, "Call auth failed: %s\n", err.Error())
+				responseBytes := NewResponseStr(logCtx, GwErrCallLogin, "call auth error", nil)
 				if responseBytes != nil {
 					w.Write(responseBytes)
 					return
