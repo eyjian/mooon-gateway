@@ -9,9 +9,14 @@ option go_package = "./mooon_auth";
 // Cookie
 // 注意同 mooon_login.proto 中的保持完全相同
 message Cookie {
-  string name = 1;
-  string value = 2;
-  string path = 3;
+  string name    = 1; // Cookie 的标识符，用于在客户端和服务器之间传递数据。
+  string value   = 2; // 与 Cookie 关联的值，可以是任意字符串。
+  string path    = 3; // 可选的，可以访问该 Cookie 的页面路径。如果不设置，则默认等于创建 Cookie 的网页所在的路径。
+  string domain  = 4; // 可选的，可以访问该 Cookie 的域名。如果不设置，则默认等于创建 Cookie 的网页的域名。
+  int64 expires  = 5; // 可选的，Cookie 的过期时间，即 Cookie 何时将被自动删除。如果没有设置，则表示该 Cookie 在用户关闭浏览器时会被删除。
+  int32 max_age  = 6; // 可选的，Cookie 最长可保持活跃的时间，单位通常是秒
+  bool secure    = 7; // 可选的，如果设置了该标志，表示该 Cookie 只能通过加密协议（如 HTTPS）传输。
+  bool http_only = 8; // 可选的，如果设置了该标志，那么该 Cookie 只能通过 HTTP 协议传输，而不能通过 JavaScript 等脚本语言来访问，这样可以防止跨站点脚本攻击（XSS）。
 }
 
 // 鉴权请求消息
@@ -23,6 +28,7 @@ message AuthReq {
 message AuthResp {
   repeated Cookie http_cookies = 1; // 写入 cookie 的数据，这些信息将传给后端服务
   map<string, string> http_headers = 2; // 写入 http 头的数据
+  string body = 3;
 }
 
 // 鉴权（authentication）服务定义
