@@ -3,14 +3,19 @@
 package middleware
 
 import (
-	"github.com/zeromicro/go-zero/core/logc"
-	"github.com/zeromicro/go-zero/core/logx"
+	"context"
 	"io"
-	"mooon-gateway/mooonlogin"
 	"net/http"
 	"strings"
 )
 import (
+	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/logc"
+	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/zrpc"
+)
+import (
+	"mooon-gateway/mooonlogin"
 	"mooon-gateway/pb/mooon_login"
 )
 
@@ -23,7 +28,16 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			next.ServeHTTP(w, r)
 		} else {
 			var loginReq mooon_login.LoginReq
-			var mooonLogin mooonlogin.MooonLogin
+
+			mooonLogin, err := getLoginClient(logCtx)
+			if err != nil {
+				responseBytes, err := NewResponseStr(logCtx, GwErrConnLogin, "conn login error", nil)
+				if err == nil {
+					w.Header().Set("Content-Type", "application/json")
+					w.Write(responseBytes)
+				}
+				return
+			}
 
 			reqBodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
@@ -40,8 +54,8 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				if err == nil {
 					w.Header().Set("Content-Type", "application/json")
 					w.Write(responseBytes)
-					return
 				}
+				return
 			}
 
 			// 写 http 头
@@ -65,4 +79,23 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			}
 		}
 	}
+}
+
+func getLoginClient(logCtx context.Context) (mooonlogin.MooonLogin, error) {
+	var loginConf zrpc.RpcClientConf
+
+	err := conf.Load("etc/login.yaml", &loginConf)
+	if err != nil {
+		logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
+		return nil, err
+	}
+
+	zrpcClient, err := zrpc.NewClient(loginConf)
+	if err != nil {
+		logc.Errorf(logCtx, "New login client error: %s\n", err.Error())
+		return nil, err
+	}
+
+	loginClient := mooonlogin.NewMooonLogin(zrpcClient)
+	return loginClient, nil
 }

@@ -3,13 +3,20 @@
 package middleware
 
 import (
-	"github.com/zeromicro/go-zero/core/logc"
-	"github.com/zeromicro/go-zero/core/logx"
+	"context"
 	"io"
-	"mooon-gateway/mooonauth"
-	"mooon-gateway/pb/mooon_auth"
 	"net/http"
 	"strings"
+)
+import (
+	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/logc"
+	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/zrpc"
+)
+import (
+	"mooon-gateway/mooonauth"
+	"mooon-gateway/pb/mooon_auth"
 )
 
 // AuthMiddleware 鉴权
@@ -21,7 +28,16 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			next.ServeHTTP(w, r)
 		} else {
 			var authReq mooon_auth.AuthReq
-			var mooonAuth mooonauth.MooonAuth
+
+			mooonAuth, err := getAuthClient(logCtx)
+			if err != nil {
+				responseBytes, err := NewResponseStr(logCtx, GwErrConnAuth, "conn auth error", nil)
+				if err == nil {
+					w.Header().Set("Content-Type", "application/json")
+					w.Write(responseBytes)
+				}
+				return
+			}
 
 			reqBodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
@@ -62,4 +78,23 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			}
 		}
 	}
+}
+
+func getAuthClient(logCtx context.Context) (mooonauth.MooonAuth, error) {
+	var authConf zrpc.RpcClientConf
+
+	err := conf.Load("etc/auth.yaml", &authConf)
+	if err != nil {
+		logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
+		return nil, err
+	}
+
+	zrpcClient, err := zrpc.NewClient(authConf)
+	if err != nil {
+		logc.Errorf(logCtx, "New auth client error: %s\n", err.Error())
+		return nil, err
+	}
+
+	authClient := mooonauth.NewMooonAuth(zrpcClient)
+	return authClient, nil
 }
