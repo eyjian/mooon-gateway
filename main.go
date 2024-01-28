@@ -2,10 +2,11 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/zeromicro/go-zero/core/logc"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"google.golang.org/grpc/status"
 	"mooon-gateway/middleware"
@@ -29,7 +30,7 @@ func main() {
 	defer server.Stop()
 
 	// 设置错误处理
-	httpx.SetErrorHandlerCtx(grpcErrorHandlerCtx)
+	httpx.SetErrorHandler(grpcErrorHandler)
 
 	fmt.Printf("Starting mooon_gateway at %s:%d...\n", c.Host, c.Port)
 	server.Start()
@@ -58,6 +59,8 @@ func (rw *responseWriter) Body() []byte {
 // 对于已经包含了“code”的不做任何处理（原因是 grpcErrorHandler 才能处理好）
 func wrapResponse(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
+
 		// 记录原始响应 writer
 		rw := &responseWriter{
 			ResponseWriter: w,
@@ -76,6 +79,7 @@ func wrapResponse(next http.HandlerFunc) http.HandlerFunc {
 		var resp map[string]interface{}
 		err := json.Unmarshal(rw.Body(), &resp)
 		if err != nil {
+			logc.Errorf(logCtx, "Unmarshal response error: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -84,7 +88,10 @@ func wrapResponse(next http.HandlerFunc) http.HandlerFunc {
 		if _, ok := resp["code"]; ok {
 			// 如果响应已经包含 code，则直接写回原始响应正文
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(rw.Body())
+			_, err := w.Write(rw.Body())
+			if err != nil {
+				logc.Errorf(logCtx, "Write response error: %s\n", err.Error())
+			}
 			return
 		}
 
@@ -103,27 +110,16 @@ func wrapResponse(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func grpcErrorHandler(err error) (int, any) {
-	fmt.Printf("ErrorHandler => %s\n", err)
 	if st, ok := status.FromError(err); ok {
-		return http.StatusOK, MyResponse{
+		return http.StatusOK, middleware.Response{
 			Code:    int(st.Code()),
 			Message: st.Message(),
 		}
 	}
 
-	code := 2024
-	return http.StatusOK, MyResponse{
+	code := middleware.GwErrUnknown
+	return http.StatusOK, middleware.Response{
 		Code:    code,
 		Message: err.Error(),
 	}
-}
-
-func grpcErrorHandlerCtx(ctx context.Context, err error) (int, any) {
-	return grpcErrorHandler(err)
-}
-
-type MyResponse struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
 }

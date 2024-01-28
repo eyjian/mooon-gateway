@@ -3,49 +3,61 @@
 package middleware
 
 import (
+	"github.com/zeromicro/go-zero/core/logc"
+	"github.com/zeromicro/go-zero/core/logx"
 	"io"
-	"net/http"
-	"strings"
-)
-import (
 	"mooon-gateway/mooonauth"
 	"mooon-gateway/pb/mooon_auth"
+	"net/http"
+	"strings"
 )
 
 // AuthMiddleware 鉴权
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasPrefix(r.URL.Path, "/v2/") {
+		logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
+
+		if !strings.HasPrefix(r.URL.Path, "/v1/") {
 			next.ServeHTTP(w, r)
 		} else {
 			var authReq mooon_auth.AuthReq
 			var mooonAuth mooonauth.MooonAuth
 
-			bodyBytes, err := io.ReadAll(r.Body)
+			reqBodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
+				logc.Errorf(logCtx, "Read request body error: %s\n", err.Error())
 				return
-			} else {
-				defer r.Body.Close()
+			}
+			defer r.Body.Close()
 
-				authReq.Body = bodyBytes
-				authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
-				if err == nil {
-					// 写 http 头
-					for name, value := range authResp.HttpHeaders {
-						w.Header().Set(name, value)
-					}
-					// 写 cookies
-					for _, authCookie := range authResp.HttpCookies {
-						httpCookie := AuthCookie2HttpCookie(authCookie)
-						http.SetCookie(w, httpCookie)
-					}
-					// 写响应体
-					if len(authResp.Body) > 0 {
-						_, _ = w.Write(authResp.Body) // 得放在最后
-					}
-					w.WriteHeader(http.StatusOK)
-				} else {
+			authReq.Body = reqBodyBytes
+			authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
+			if err != nil {
+				logc.Errorf(logCtx, "Call login failed: %s\n", err.Error())
+				responseBytes := NewResponseStr(logCtx, GwErrCallLogin, "call login error", nil)
+				if responseBytes != nil {
+					w.Write(responseBytes)
 					return
+				}
+			}
+
+			// 写 http 头
+			for name, value := range authResp.HttpHeaders {
+				w.Header().Set(name, value)
+			}
+			// 写 cookies
+			for _, authCookie := range authResp.HttpCookies {
+				httpCookie := AuthCookie2HttpCookie(authCookie)
+				http.SetCookie(w, httpCookie)
+			}
+			// 写响应体
+			responseBytes := NewResponseStr(logCtx, GwSuccess, "", authResp.Body)
+			if responseBytes != nil {
+				_, err = w.Write(responseBytes) // 得放在最后
+				if err != nil {
+					logc.Errorf(logCtx, "Write response: %s\n", err.Error())
+				} else {
+					w.WriteHeader(http.StatusOK)
 				}
 			}
 		}

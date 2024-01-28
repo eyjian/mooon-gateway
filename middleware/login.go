@@ -3,6 +3,8 @@
 package middleware
 
 import (
+	"github.com/zeromicro/go-zero/core/logc"
+	"github.com/zeromicro/go-zero/core/logx"
 	"io"
 	"net/http"
 	"strings"
@@ -15,37 +17,49 @@ import (
 // LoginMiddleware 登录
 func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
+
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
 			next.ServeHTTP(w, r)
 		} else {
 			var loginReq mooon_login.LoginReq
 			var mooonLogin mooonlogin.MooonLogin
 
-			bodyBytes, err := io.ReadAll(r.Body)
+			reqBodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
+				logc.Errorf(logCtx, "Read request body error: %s\n", err.Error())
 				return
-			} else {
-				defer r.Body.Close()
+			}
+			defer r.Body.Close()
 
-				loginReq.Body = bodyBytes
-				loginResp, err := mooonLogin.Login(r.Context(), &loginReq)
-				if err == nil {
-					// 写 http 头
-					for name, value := range loginResp.HttpHeaders {
-						w.Header().Set(name, value)
-					}
-					// 写 cookies
-					for _, loginCookie := range loginResp.HttpCookies {
-						httpCookie := LoginCookie2HttpCookie(loginCookie)
-						http.SetCookie(w, httpCookie)
-					}
-					// 写响应体
-					if len(loginResp.Body) > 0 {
-						_, _ = w.Write(loginResp.Body) // 得放在最后
-					}
-					w.WriteHeader(http.StatusOK)
-				} else {
+			loginReq.Body = reqBodyBytes
+			loginResp, err := mooonLogin.Login(r.Context(), &loginReq)
+			if err != nil {
+				logc.Errorf(logCtx, "Call login failed: %s\n", err.Error())
+				responseBytes := NewResponseStr(logCtx, GwErrCallLogin, "call login error", nil)
+				if responseBytes != nil {
+					w.Write(responseBytes)
 					return
+				}
+			}
+
+			// 写 http 头
+			for name, value := range loginResp.HttpHeaders {
+				w.Header().Set(name, value)
+			}
+			// 写 cookies
+			for _, loginCookie := range loginResp.HttpCookies {
+				httpCookie := LoginCookie2HttpCookie(loginCookie)
+				http.SetCookie(w, httpCookie)
+			}
+			// 写响应体
+			responseBytes := NewResponseStr(logCtx, GwSuccess, "", loginResp.Body)
+			if responseBytes != nil {
+				_, err = w.Write(responseBytes) // 得放在最后
+				if err != nil {
+					logc.Errorf(logCtx, "Write response: %s\n", err.Error())
+				} else {
+					w.WriteHeader(http.StatusOK)
 				}
 			}
 		}
