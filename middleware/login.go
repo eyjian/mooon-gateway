@@ -32,9 +32,6 @@ func NewLoginClient() {
 // LoginMiddleware 登录
 func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("[LoginMiddleware] r.Body ==> %s\n",r.Body)
-		fmt.Printf("[LoginMiddleware] r.URL.RawQuery: %s\n", r.URL.RawQuery)
-
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
 			next.ServeHTTP(w, r)
 		} else {
