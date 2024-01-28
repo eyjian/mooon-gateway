@@ -34,8 +34,8 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
 			if err != nil {
 				logc.Errorf(logCtx, "Call auth failed: %s\n", err.Error())
-				responseBytes := NewResponseStr(logCtx, GwErrCallAuth, "call auth error", nil)
-				if responseBytes != nil {
+				responseBytes, err := NewResponseStr(logCtx, GwErrCallAuth, "call auth error", nil)
+				if err == nil {
 					w.Write(responseBytes)
 					return
 				}
@@ -51,8 +51,8 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				http.SetCookie(w, httpCookie)
 			}
 			// 写响应体
-			responseBytes := NewResponseStr(logCtx, GwSuccess, "", authResp.Body)
-			if responseBytes != nil {
+			responseBytes, err := NewResponseStr(logCtx, GwSuccess, "", authResp.Body)
+			if err == nil {
 				_, err = w.Write(responseBytes) // 得放在最后
 				if err != nil {
 					logc.Errorf(logCtx, "Write response: %s\n", err.Error())

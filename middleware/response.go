@@ -14,7 +14,7 @@ type Response struct {
 	Data    any    `json:"data,omitempty"`
 }
 
-func NewResponseStr(ctx context.Context, code int, message string, data any) []byte {
+func NewResponseStr(ctx context.Context, code int, message string, data any) ([]byte, error) {
 	response := &Response{
 		Code:    code,
 		Message: message,
@@ -23,8 +23,8 @@ func NewResponseStr(ctx context.Context, code int, message string, data any) []b
 	responseBytes, err := json.Marshal(response)
 	if err != nil {
 		logc.Errorf(ctx, "Marshal response error: %s", err.Error())
-		return nil
+		return nil, err
 	} else {
-		return responseBytes
+		return responseBytes, nil
 	}
 }

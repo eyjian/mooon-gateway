@@ -6,11 +6,11 @@ import (
 	"github.com/zeromicro/go-zero/core/logc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"io"
+	"mooon-gateway/mooonlogin"
 	"net/http"
 	"strings"
 )
 import (
-	"mooon-gateway/mooonlogin"
 	"mooon-gateway/pb/mooon_login"
 )
 
@@ -36,8 +36,9 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			loginResp, err := mooonLogin.Login(r.Context(), &loginReq)
 			if err != nil {
 				logc.Errorf(logCtx, "Call login failed: %s\n", err.Error())
-				responseBytes := NewResponseStr(logCtx, GwErrCallLogin, "call login error", nil)
-				if responseBytes != nil {
+				responseBytes, err := NewResponseStr(logCtx, GwErrCallLogin, "call login error", nil)
+				if err == nil {
+					w.Header().Set("Content-Type", "application/json")
 					w.Write(responseBytes)
 					return
 				}
@@ -53,8 +54,8 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				http.SetCookie(w, httpCookie)
 			}
 			// 写响应体
-			responseBytes := NewResponseStr(logCtx, GwSuccess, "", loginResp.Body)
-			if responseBytes != nil {
+			responseBytes, err := NewResponseStr(logCtx, GwSuccess, "", loginResp.Body)
+			if err == nil {
 				_, err = w.Write(responseBytes) // 得放在最后
 				if err != nil {
 					logc.Errorf(logCtx, "Write response: %s\n", err.Error())
