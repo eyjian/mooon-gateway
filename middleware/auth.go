@@ -67,13 +67,15 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				http.SetCookie(w, httpCookie)
 			}
 			// 写响应体
-			responseBytes, err := NewResponseStr(logCtx, GwSuccess, "", authResp.Body)
-			if err == nil {
-				_, err = w.Write(responseBytes) // 得放在最后
-				if err != nil {
-					logc.Errorf(logCtx, "Write response: %s\n", err.Error())
-				} else {
-					w.WriteHeader(http.StatusOK)
+			if len(authResp.Body) > 0 {
+				responseBytes, err := NewResponseStr(logCtx, GwSuccess, "", authResp.Body)
+				if err == nil {
+					_, err = w.Write(responseBytes) // 得放在最后
+					if err != nil {
+						logc.Errorf(logCtx, "Write response: %s\n", err.Error())
+					} else {
+						w.WriteHeader(http.StatusOK)
+					}
 				}
 			}
 		}
