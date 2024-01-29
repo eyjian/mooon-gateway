@@ -1,6 +1,15 @@
 Name: gateway-example # gateway name
 Host: localhost # gateway host
 Port: 8888 # gateway port
+
+Log:
+  Level: info
+  Mode: file
+  MaxBackups: 10
+  MaxSize: 200
+  Rotation: size
+  Path: log
+
 Upstreams: # upstreams
   - Grpc:
       Etcd:
