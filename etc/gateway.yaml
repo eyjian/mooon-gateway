@@ -34,5 +34,5 @@ Upstreams: # upstreams
     #  - proto/user.pb
     Mappings: # Mappings can also be written in proto options
       - Method: get
-        Path: /v1/query_user
+        Path: /v2/query_user
         RpcPath: user.User/query_user
