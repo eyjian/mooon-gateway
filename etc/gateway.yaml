@@ -10,6 +10,18 @@ Log:
   Rotation: size
   Path: log
 
+Auth:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: mooonauth.rpc
+
+Login:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: mooonlogin.rpc
+
 Upstreams: # upstreams
   - Grpc:
       Etcd:

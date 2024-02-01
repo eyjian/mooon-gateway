@@ -19,11 +19,10 @@ import (
 var configFile = flag.String("f", "etc/gateway.yaml", "the config file")
 
 func main() {
-	var c gateway.GatewayConf
 	flag.Parse()
 
-	conf.MustLoad(*configFile, &c)
-	server := gateway.MustNewServer(c)
+	conf.MustLoad(*configFile, &middleware.GlobalConfig)
+	server := gateway.MustNewServer(middleware.GlobalConfig.GatewayConf)
 	server.Use(middleware.LoginMiddleware)
 	server.Use(middleware.AuthMiddleware)
 	server.Use(wrapResponse)
@@ -32,7 +31,7 @@ func main() {
 	// 设置错误处理
 	httpx.SetErrorHandler(grpcErrorHandler)
 
-	fmt.Printf("Starting mooon_gateway at %s:%d...\n", c.Host, c.Port)
+	fmt.Printf("Starting mooon_gateway at %s:%d...\n", middleware.GlobalConfig.Host, middleware.GlobalConfig.Port)
 	server.Start()
 }
 

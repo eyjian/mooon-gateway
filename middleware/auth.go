@@ -9,7 +9,6 @@ import (
 	"strings"
 )
 import (
-	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/zrpc"
@@ -83,15 +82,15 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func getAuthClient(logCtx context.Context) (mooonauth.MooonAuth, error) {
-	var authConf zrpc.RpcClientConf
+	/*var authConf zrpc.RpcClientConf
 
-	err := conf.Load("etc/auth.yaml", &authConf)
-	if err != nil {
-		logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
-		return nil, err
-	}
+	  err := conf.Load("etc/auth.yaml", &authConf)
+	  if err != nil {
+	  	logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
+	  	return nil, err
+	  }*/
 
-	zrpcClient, err := zrpc.NewClient(authConf)
+	zrpcClient, err := zrpc.NewClient(GlobalConfig.AuthConf)
 	if err != nil {
 		logc.Errorf(logCtx, "New auth client error: %s\n", err.Error())
 		return nil, err
