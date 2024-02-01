@@ -2,7 +2,7 @@ Name: gateway-example # gateway name
 Host: localhost # gateway host
 Port: 8888 # gateway port
 
-Log:
+Log: # Log conf
   Level: info
   Mode: file
   MaxBackups: 10
@@ -10,14 +10,14 @@ Log:
   Rotation: size
   Path: log
 
-Login:
+Login: # Login service client conf
   Prefix: /v1
   Etcd:
     Hosts:
       - 127.0.0.1:2379
     Key: mooonlogin.rpc
 
-Auth:
+Auth: # Authentication service client conf
   Prefix: /v2
   Etcd:
     Hosts:
