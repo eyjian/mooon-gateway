@@ -31,7 +31,7 @@ message AuthResp {
   bytes body = 3;
 }
 
-// 鉴权（authentication）服务定义
+// Authenticate 鉴权（authentication）服务定义
 service MooonAuth {
-  rpc authenticate(AuthReq) returns(AuthResp);
+  rpc Authenticate(AuthReq) returns(AuthResp);
 }

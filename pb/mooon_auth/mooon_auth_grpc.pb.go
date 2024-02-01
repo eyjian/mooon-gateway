@@ -22,7 +22,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	MooonAuth_Authenticate_FullMethodName = "/mooon_auth.MooonAuth/authenticate"
+	MooonAuth_Authenticate_FullMethodName = "/mooon_auth.MooonAuth/Authenticate"
 )
 
 // MooonAuthClient is the client API for MooonAuth service.
@@ -103,7 +103,7 @@ var MooonAuth_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MooonAuthServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "authenticate",
+			MethodName: "Authenticate",
 			Handler:    _MooonAuth_Authenticate_Handler,
 		},
 	},

@@ -30,7 +30,7 @@ message LoginResp {
   bytes body = 3;
 }
 
-// 登录（login）服务定义
+// Login 登录（login）服务定义
 service MooonLogin {
-  rpc login(LoginReq) returns(LoginResp);
+  rpc Login(LoginReq) returns(LoginResp);
 }

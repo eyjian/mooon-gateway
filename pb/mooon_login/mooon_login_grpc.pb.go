@@ -21,7 +21,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	MooonLogin_Login_FullMethodName = "/mooon_login.MooonLogin/login"
+	MooonLogin_Login_FullMethodName = "/mooon_login.MooonLogin/Login"
 )
 
 // MooonLoginClient is the client API for MooonLogin service.
@@ -102,7 +102,7 @@ var MooonLogin_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MooonLoginServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "login",
+			MethodName: "Login",
 			Handler:    _MooonLogin_Login_Handler,
 		},
 	},
