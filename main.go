@@ -22,6 +22,9 @@ func main() {
 	flag.Parse()
 
 	conf.MustLoad(*configFile, &middleware.GlobalConfig)
+	//fmt.Printf("LoginPrefix: %s\n", middleware.GlobalConfig.LoginPrefix)
+	//fmt.Printf("AuthPrefix: %s\n", middleware.GlobalConfig.AuthPrefix)
+
 	server := gateway.MustNewServer(middleware.GlobalConfig.GatewayConf)
 	server.Use(middleware.LoginMiddleware)
 	server.Use(middleware.AuthMiddleware)

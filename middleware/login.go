@@ -23,7 +23,7 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
 
-		if !strings.HasPrefix(r.URL.Path, "/v1/") {
+		if !strings.HasPrefix(r.URL.Path, GlobalConfig.LoginPrefix) {
 			next.ServeHTTP(w, r)
 		} else {
 			var loginReq mooon_login.LoginReq
