@@ -2,9 +2,6 @@ Name: gateway-example # gateway name
 Host: localhost # gateway host
 Port: 8888 # gateway port
 
-LoginPrefix: /v1
-AuthPrefix: /v2
-
 Log:
   Level: info
   Mode: file
@@ -13,17 +10,19 @@ Log:
   Rotation: size
   Path: log
 
-Auth:
-  Etcd:
-    Hosts:
-      - 127.0.0.1:2379
-    Key: mooonauth.rpc
-
 Login:
+  Prefix: /v1
   Etcd:
     Hosts:
       - 127.0.0.1:2379
     Key: mooonlogin.rpc
+
+Auth:
+  Prefix: /v2
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: mooonauth.rpc
 
 Upstreams: # upstreams
   - Grpc:

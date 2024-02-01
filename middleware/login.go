@@ -23,7 +23,7 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
 
-		if !strings.HasPrefix(r.URL.Path, GlobalConfig.LoginPrefix) {
+		if !strings.HasPrefix(r.URL.Path, GlobalConfig.Login.Prefix) {
 			next.ServeHTTP(w, r)
 		} else {
 			var loginReq mooon_login.LoginReq
@@ -91,7 +91,7 @@ func getLoginClient(logCtx context.Context) (mooonlogin.MooonLogin, error) {
 	  	return nil, err
 	  }*/
 
-	zrpcClient, err := zrpc.NewClient(GlobalConfig.LoginConf)
+	zrpcClient, err := zrpc.NewClient(GlobalConfig.Login.RpcClientConf)
 	if err != nil {
 		logc.Errorf(logCtx, "New login client error: %s\n", err.Error())
 		return nil, err

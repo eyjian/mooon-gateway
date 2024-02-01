@@ -23,7 +23,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
 
-		if !strings.HasPrefix(r.URL.Path, GlobalConfig.AuthPrefix) {
+		if !strings.HasPrefix(r.URL.Path, GlobalConfig.Auth.Prefix) {
 			next.ServeHTTP(w, r)
 		} else {
 			var authReq mooon_auth.AuthReq
@@ -90,7 +90,7 @@ func getAuthClient(logCtx context.Context) (mooonauth.MooonAuth, error) {
 	  	return nil, err
 	  }*/
 
-	zrpcClient, err := zrpc.NewClient(GlobalConfig.AuthConf)
+	zrpcClient, err := zrpc.NewClient(GlobalConfig.Auth.RpcClientConf)
 	if err != nil {
 		logc.Errorf(logCtx, "New auth client error: %s\n", err.Error())
 		return nil, err
