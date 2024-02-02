@@ -1,6 +1,6 @@
 Name: gateway-example # gateway name
 Host: localhost # gateway host
-Port: 8888 # gateway port
+Port: 6688 # gateway port
 
 Log:
   Level: info
