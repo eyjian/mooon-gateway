@@ -52,12 +52,14 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
                 logc.Errorf(logCtx, "Call auth failed: %s\n", err.Error())
                 responseBytes, err := NewResponseStr(logCtx, GwErrCallAuth, "call auth error", "")
                 if err == nil {
+                    w.Header().Set("Content-Type", "application/json")
                     w.Write(responseBytes)
                     return
                 }
             }
 
             // 写 http 头
+            w.Header().Set("Content-Type", "application/json")
             for name, value := range authResp.HttpHeaders {
                 w.Header().Set(name, value)
             }
