@@ -4,6 +4,7 @@ package middleware
 
 import (
     "context"
+    "google.golang.org/grpc/status"
     "io"
     "net/http"
     "strings"
@@ -49,8 +50,23 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
             authReq.Body = string(reqBodyBytes)
             authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
             if err != nil {
+                var code ErrCode
+                var message string
+
+                // 处理出错码
+                if st, ok := status.FromError(err); ok {
+                    code = ErrCode(st.Code())
+                    message = st.Message()
+                    logc.Errorf(logCtx, "call auth error: (%d) %s", code, message)
+                } else {
+                    code = GwErrCallAuth
+                    message = "call auth failed"
+                    logc.Errorf(logCtx, "%s: %s\n", message, err.Error())
+                }
+
+                // 调用出错响应
                 logc.Errorf(logCtx, "Call auth failed: %s\n", err.Error())
-                responseBytes, err := NewResponseStr(logCtx, GwErrCallAuth, "call auth error", "")
+                responseBytes, err := NewResponseStr(logCtx, code, message, "")
                 if err == nil {
                     w.Header().Set("Content-Type", "application/json")
                     w.Write(responseBytes)

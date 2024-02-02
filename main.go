@@ -113,14 +113,14 @@ func wrapResponse(next http.HandlerFunc) http.HandlerFunc {
 func grpcErrorHandler(err error) (int, any) {
     if st, ok := status.FromError(err); ok {
         return http.StatusOK, middleware.Response{
-            Code:    int(st.Code()),
+            Code:    uint32(st.Code()),
             Message: st.Message(),
         }
     }
 
     code := middleware.GwErrUnknown
     return http.StatusOK, middleware.Response{
-        Code:    code,
+        Code:    uint32(code),
         Message: err.Error(),
     }
 }

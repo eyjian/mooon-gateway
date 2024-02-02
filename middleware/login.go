@@ -4,6 +4,7 @@ package middleware
 
 import (
     "context"
+    "google.golang.org/grpc/status"
     "io"
     "net/http"
     "strings"
@@ -49,8 +50,22 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
             loginReq.Body = string(reqBodyBytes)
             loginResp, err := mooonLogin.Login(r.Context(), &loginReq)
             if err != nil {
-                logc.Errorf(logCtx, "Call login failed: %s\n", err.Error())
-                responseBytes, err := NewResponseStr(logCtx, GwErrCallLogin, "call login error", "")
+                var code ErrCode
+                var message string
+
+                // 处理出错码
+                if st, ok := status.FromError(err); ok {
+                    code = ErrCode(st.Code())
+                    message = st.Message()
+                    logc.Errorf(logCtx, "call login error: (%d) %s", code, message)
+                } else {
+                    code = GwErrCallLogin
+                    message = "call login failed"
+                    logc.Errorf(logCtx, "%s: %s\n", message, err.Error())
+                }
+
+                // 调用出错响应
+                responseBytes, err := NewResponseStr(logCtx, code, message, "")
                 if err == nil {
                     w.Header().Set("Content-Type", "application/json")
                     w.Write(responseBytes)

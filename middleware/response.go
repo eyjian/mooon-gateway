@@ -9,12 +9,12 @@ import (
 )
 
 type Response struct {
-    Code    int    `json:"code"`
+    Code    uint32    `json:"code"`
     Message string `json:"message,omitempty"`
     Data    string `json:"data,omitempty"`
 }
 
-func NewResponseStr(ctx context.Context, code int, message string, data string) ([]byte, error) {
+func NewResponseStr(ctx context.Context, code ErrCode, message string, data string) ([]byte, error) {
     var resp map[string]any
 
     // 尝试以 json 格式处理 data
@@ -41,7 +41,7 @@ func NewResponseStr(ctx context.Context, code int, message string, data string) 
 
     // 以 json 格式处理 data 失败，转做普通字符串
     response := &Response{
-        Code:    code,
+        Code:    uint32(code),
         Message: message,
         Data:    data,
     }
