@@ -15,6 +15,31 @@ type Response struct {
 }
 
 func NewResponseStr(ctx context.Context, code int, message string, data string) ([]byte, error) {
+    var resp map[string]any
+
+    // 尝试以 json 格式处理 data
+    if len(data) > 0 {
+        err := json.Unmarshal([]byte(data), &resp)
+        if err != nil {
+            logc.Errorf(ctx, "Unmarshal error: %s (%s)", err.Error(), data)
+        } else {
+            // 包装响应数据
+            wrappedResp := map[string]any{
+                "code":    code,
+                "message": message,
+                "data":    resp,
+            }
+
+            responseBytes, err := json.Marshal(wrappedResp)
+            if err != nil {
+                logc.Errorf(ctx, "Marshal error: %s (%s)", err.Error(), data)
+            } else {
+                return responseBytes, nil // data 为有效的 json 格式数据
+            }
+        }
+    }
+
+    // 以 json 格式处理 data 失败，转做普通字符串
     response := &Response{
         Code:    code,
         Message: message,
