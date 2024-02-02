@@ -9,22 +9,22 @@ import (
 )
 
 type Response struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
+    Code    int    `json:"code"`
+    Message string `json:"message"`
+    Data    any    `json:"data,omitempty"`
 }
 
 func NewResponseStr(ctx context.Context, code int, message string, data any) ([]byte, error) {
-	response := &Response{
-		Code:    code,
-		Message: message,
-		Data:    data,
-	}
-	responseBytes, err := json.Marshal(response)
-	if err != nil {
-		logc.Errorf(ctx, "Marshal response error: %s", err.Error())
-		return nil, err
-	} else {
-		return responseBytes, nil
-	}
+    response := &Response{
+        Code:    code,
+        Message: message,
+        Data:    data,
+    }
+    responseBytes, err := json.Marshal(response)
+    if err != nil {
+        logc.Errorf(ctx, "Marshal response error: %s", err.Error())
+        return nil, err
+    } else {
+        return responseBytes, nil
+    }
 }
