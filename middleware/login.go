@@ -9,6 +9,7 @@ import (
     "strings"
 )
 import (
+    "github.com/zeromicro/go-zero/core/conf"
     "github.com/zeromicro/go-zero/core/logc"
     "github.com/zeromicro/go-zero/core/logx"
     "github.com/zeromicro/go-zero/zrpc"
@@ -23,8 +24,7 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
 
-        logc.Debugf(logCtx, "Login.Prefix: %s, r.URL.Path: %s\n", GlobalConfig.Login.Prefix, r.URL.Path)
-        if !strings.HasPrefix(r.URL.Path, GlobalConfig.Login.Prefix) {
+        if !strings.HasPrefix(r.URL.Path, "/v1/") {
             next.ServeHTTP(w, r)
         } else {
             var loginReq mooon_login.LoginReq
@@ -84,15 +84,15 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func getLoginClient(logCtx context.Context) (mooonlogin.MooonLogin, error) {
-    /*var loginConf zrpc.RpcClientConf
+    var loginConf zrpc.RpcClientConf
 
-      err := conf.Load("etc/login.yaml", &loginConf)
-      if err != nil {
-      	logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
-      	return nil, err
-      }*/
+    err := conf.Load("etc/login.yaml", &loginConf)
+    if err != nil {
+        logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
+        return nil, err
+    }
 
-    zrpcClient, err := zrpc.NewClient(GlobalConfig.Login.RpcClientConf)
+    zrpcClient, err := zrpc.NewClient(loginConf)
     if err != nil {
         logc.Errorf(logCtx, "New login client error: %s\n", err.Error())
         return nil, err

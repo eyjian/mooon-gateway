@@ -2,27 +2,13 @@ Name: gateway-example # gateway name
 Host: localhost # gateway host
 Port: 8888 # gateway port
 
-Log: # Log conf
+Log:
   Level: info
   Mode: file
   MaxBackups: 10
   MaxSize: 200
   Rotation: size
   Path: log
-
-Login: # Login service client conf
-  Prefix: /v1
-  Etcd:
-    Hosts:
-      - 127.0.0.1:2379
-    Key: mooonlogin.rpc
-
-Auth: # Authentication service client conf
-  Prefix: /v2
-  Etcd:
-    Hosts:
-      - 127.0.0.1:2379
-    Key: mooonauth.rpc
 
 Upstreams: # upstreams
   - Grpc:
@@ -34,5 +20,5 @@ Upstreams: # upstreams
     #  - proto/user.pb
     Mappings: # Mappings can also be written in proto options
       - Method: get
-        Path: /v2/query_user
+        Path: /v1/query_user
         RpcPath: user.User/query_user
