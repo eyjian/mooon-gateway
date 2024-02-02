@@ -21,14 +21,14 @@ message Cookie {
 
 // 鉴权请求消息
 message AuthReq {
-  bytes body = 1; // 鉴权请求体，建议为 json 格式的数据
+  string body = 1; // 鉴权请求体，建议为 json 格式的数据
 }
 
 // 鉴权响应消息
 message AuthResp {
   repeated Cookie http_cookies = 1; // 写入 cookie 的数据，这些信息将传给后端服务
   map<string, string> http_headers = 2; // 写入 http 头的数据
-  bytes body = 3;
+  string body = 3;
 }
 
 // Authenticate 鉴权（authentication）服务定义

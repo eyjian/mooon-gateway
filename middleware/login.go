@@ -9,7 +9,6 @@ import (
     "strings"
 )
 import (
-    "github.com/zeromicro/go-zero/core/conf"
     "github.com/zeromicro/go-zero/core/logc"
     "github.com/zeromicro/go-zero/core/logx"
     "github.com/zeromicro/go-zero/zrpc"
@@ -24,14 +23,15 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
 
-        if !strings.HasPrefix(r.URL.Path, "/v1/") {
+        logc.Debugf(logCtx, "Login.Prefix: %s, r.URL.Path: %s\n", GlobalConfig.Login.Prefix, r.URL.Path)
+        if !strings.HasPrefix(r.URL.Path, GlobalConfig.Login.Prefix) {
             next.ServeHTTP(w, r)
         } else {
             var loginReq mooon_login.LoginReq
 
             mooonLogin, err := getLoginClient(logCtx)
             if err != nil {
-                responseBytes, err := NewResponseStr(logCtx, GwErrConnLogin, "conn login error", nil)
+                responseBytes, err := NewResponseStr(logCtx, GwErrConnLogin, "conn login error", "")
                 if err == nil {
                     w.Header().Set("Content-Type", "application/json")
                     w.Write(responseBytes)
@@ -46,11 +46,11 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
             }
             defer r.Body.Close()
 
-            loginReq.Body = reqBodyBytes
+            loginReq.Body = string(reqBodyBytes)
             loginResp, err := mooonLogin.Login(r.Context(), &loginReq)
             if err != nil {
                 logc.Errorf(logCtx, "Call login failed: %s\n", err.Error())
-                responseBytes, err := NewResponseStr(logCtx, GwErrCallLogin, "call login error", nil)
+                responseBytes, err := NewResponseStr(logCtx, GwErrCallLogin, "call login error", "")
                 if err == nil {
                     w.Header().Set("Content-Type", "application/json")
                     w.Write(responseBytes)
@@ -59,6 +59,7 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
             }
 
             // 写 http 头
+            w.Header().Set("Content-Type", "application/json")
             for name, value := range loginResp.HttpHeaders {
                 w.Header().Set(name, value)
             }
@@ -84,15 +85,15 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func getLoginClient(logCtx context.Context) (mooonlogin.MooonLogin, error) {
-    var loginConf zrpc.RpcClientConf
+    /*var loginConf zrpc.RpcClientConf
 
-    err := conf.Load("etc/login.yaml", &loginConf)
-    if err != nil {
-        logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
-        return nil, err
-    }
+      err := conf.Load("etc/login.yaml", &loginConf)
+      if err != nil {
+      	logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
+      	return nil, err
+      }*/
 
-    zrpcClient, err := zrpc.NewClient(loginConf)
+    zrpcClient, err := zrpc.NewClient(GlobalConfig.Login.RpcClientConf)
     if err != nil {
         logc.Errorf(logCtx, "New login client error: %s\n", err.Error())
         return nil, err

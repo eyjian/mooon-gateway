@@ -4,7 +4,6 @@ import (
     "bytes"
     "encoding/json"
     "flag"
-    "fmt"
     "github.com/zeromicro/go-zero/core/logc"
     "github.com/zeromicro/go-zero/core/logx"
     "github.com/zeromicro/go-zero/rest/httpx"
@@ -19,11 +18,13 @@ import (
 var configFile = flag.String("f", "etc/gateway.yaml", "the config file")
 
 func main() {
-    var c gateway.GatewayConf
     flag.Parse()
 
-    conf.MustLoad(*configFile, &c)
-    server := gateway.MustNewServer(c)
+    conf.MustLoad(*configFile, &middleware.GlobalConfig)
+    logx.Infof("LoginPrefix: %s", middleware.GlobalConfig.Login.Prefix)
+    logx.Infof("AuthPrefix: %s", middleware.GlobalConfig.Auth.Prefix)
+
+    server := gateway.MustNewServer(middleware.GlobalConfig.GatewayConf)
     server.Use(middleware.LoginMiddleware)
     server.Use(middleware.AuthMiddleware)
     server.Use(wrapResponse)
@@ -32,7 +33,7 @@ func main() {
     // 设置错误处理
     httpx.SetErrorHandler(grpcErrorHandler)
 
-    fmt.Printf("Starting mooon_gateway at %s:%d...\n", c.Host, c.Port)
+    logx.Infof("Starting mooon_gateway at %s:%d ...", middleware.GlobalConfig.Host, middleware.GlobalConfig.Port)
     server.Start()
 }
 

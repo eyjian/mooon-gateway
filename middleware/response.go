@@ -10,11 +10,11 @@ import (
 
 type Response struct {
     Code    int    `json:"code"`
-    Message string `json:"message"`
-    Data    any    `json:"data,omitempty"`
+    Message string `json:"message,omitempty"`
+    Data    string `json:"data,omitempty"`
 }
 
-func NewResponseStr(ctx context.Context, code int, message string, data any) ([]byte, error) {
+func NewResponseStr(ctx context.Context, code int, message string, data string) ([]byte, error) {
     response := &Response{
         Code:    code,
         Message: message,

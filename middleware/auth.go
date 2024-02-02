@@ -9,7 +9,6 @@ import (
     "strings"
 )
 import (
-    "github.com/zeromicro/go-zero/core/conf"
     "github.com/zeromicro/go-zero/core/logc"
     "github.com/zeromicro/go-zero/core/logx"
     "github.com/zeromicro/go-zero/zrpc"
@@ -24,14 +23,15 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
 
-        if !strings.HasPrefix(r.URL.Path, "/v2/") {
+        logc.Debugf(logCtx, "Auth.Prefix: %s, r.URL.Path: %s\n", GlobalConfig.Auth.Prefix, r.URL.Path)
+        if !strings.HasPrefix(r.URL.Path, GlobalConfig.Auth.Prefix) {
             next.ServeHTTP(w, r)
         } else {
             var authReq mooon_auth.AuthReq
 
             mooonAuth, err := getAuthClient(logCtx)
             if err != nil {
-                responseBytes, err := NewResponseStr(logCtx, GwErrConnAuth, "conn auth error", nil)
+                responseBytes, err := NewResponseStr(logCtx, GwErrConnAuth, "conn auth error", "")
                 if err == nil {
                     w.Header().Set("Content-Type", "application/json")
                     w.Write(responseBytes)
@@ -46,11 +46,11 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
             }
             defer r.Body.Close()
 
-            authReq.Body = reqBodyBytes
+            authReq.Body = string(reqBodyBytes)
             authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
             if err != nil {
                 logc.Errorf(logCtx, "Call auth failed: %s\n", err.Error())
-                responseBytes, err := NewResponseStr(logCtx, GwErrCallAuth, "call auth error", nil)
+                responseBytes, err := NewResponseStr(logCtx, GwErrCallAuth, "call auth error", "")
                 if err == nil {
                     w.Write(responseBytes)
                     return
@@ -83,15 +83,15 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func getAuthClient(logCtx context.Context) (mooonauth.MooonAuth, error) {
-    var authConf zrpc.RpcClientConf
+    /*var authConf zrpc.RpcClientConf
 
-    err := conf.Load("etc/auth.yaml", &authConf)
-    if err != nil {
-        logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
-        return nil, err
-    }
+      err := conf.Load("etc/auth.yaml", &authConf)
+      if err != nil {
+      	logc.Errorf(logCtx, "Load conf error: %s\n", err.Error())
+      	return nil, err
+      }*/
 
-    zrpcClient, err := zrpc.NewClient(authConf)
+    zrpcClient, err := zrpc.NewClient(GlobalConfig.Auth.RpcClientConf)
     if err != nil {
         logc.Errorf(logCtx, "New auth client error: %s\n", err.Error())
         return nil, err
