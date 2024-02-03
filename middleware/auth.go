@@ -29,6 +29,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
         } else {
             newReq := authHandle(logCtx, w, r)
             if newReq != nil {
+                logc.Infof(logCtx, "auth success: host=%s, path=%s, remote=%s", r.Host, r.URL.Path, r.RemoteAddr)
                 next.ServeHTTP(w, newReq) // 鉴权成功，往下转发
             }
         }
