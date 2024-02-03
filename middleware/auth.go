@@ -21,7 +21,11 @@ import (
 // AuthMiddleware 鉴权
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
+        logCtx := logx.ContextWithFields(r.Context(),
+            logx.Field("method", r.Method),
+            logx.Field("host", r.Host),
+            logx.Field("path", r.URL.Path),
+            logx.Field("remote", r.RemoteAddr))
 
         logc.Infof(logCtx, "auth request: host=%s, path=%s, remote=%s", r.Host, r.URL.Path, r.RemoteAddr)
         if !strings.HasPrefix(r.URL.Path, GlobalConfig.Auth.Prefix) {
