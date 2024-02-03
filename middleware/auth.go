@@ -25,9 +25,12 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
         logc.Debugf(logCtx, "Auth.Prefix: %s, r.URL.Path: %s\n", GlobalConfig.Auth.Prefix, r.URL.Path)
         if !strings.HasPrefix(r.URL.Path, GlobalConfig.Auth.Prefix) {
-            next.ServeHTTP(w, r)
+            next.ServeHTTP(w, r) // 不需要鉴权的请求，往下转发
         } else {
-            authHandle(next, logCtx, w, r)
+            newReq := authHandle(logCtx, w, r)
+            if newReq != nil {
+                next.ServeHTTP(w, newReq) // 鉴权成功，往下转发
+            }
         }
     }
 }
@@ -43,7 +46,7 @@ func getAuthClient(logCtx context.Context) (mooonauth.MooonAuth, error) {
     return authClient, nil
 }
 
-func authHandle(next http.HandlerFunc, logCtx context.Context, w http.ResponseWriter, r *http.Request) {
+func authHandle(logCtx context.Context, w http.ResponseWriter, r *http.Request) *http.Request {
     var authReq mooon_auth.AuthReq
 
     // 实例化鉴权服务
@@ -54,7 +57,7 @@ func authHandle(next http.HandlerFunc, logCtx context.Context, w http.ResponseWr
             w.Header().Set("Content-Type", "application/json")
             w.Write(responseBytes)
         }
-        return
+        return nil
     }
 
     // http 头（含了 cookies）
@@ -80,46 +83,52 @@ func authHandle(next http.HandlerFunc, logCtx context.Context, w http.ResponseWr
     // 调用鉴权服务
     authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
     if err != nil { // 鉴权失败或者未通过
-        var code ErrCode
-        var message string
-
-        // 处理出错码
-        if st, ok := status.FromError(err); ok {
-            code = ErrCode(st.Code())
-            message = st.Message()
-            logc.Errorf(logCtx, "call auth error: (%d) %s", code, message)
-        } else {
-            code = GwErrCallAuth
-            message = "call auth failed"
-            logc.Errorf(logCtx, "%s: %s\n", message, err.Error())
-        }
-
-        // 出错响应
-        logc.Errorf(logCtx, "Call auth failed: %s\n", err.Error())
-        responseBytes, _ := NewResponseStr(logCtx, code, message, "")
-        w.Header().Set("Content-Type", "application/json")
-        w.Write(responseBytes)
-
-        return
+        authHandleCallFailure(logCtx, w, err)
+        return nil
     } else { // 鉴权通过，改写请求以加入（传递）鉴权数据
-        newReq := r.WithContext(r.Context())
-
-        // 写 http 头
-        for name, value := range authResp.HttpHeaders {
-            if strings.HasPrefix(name, "Grpc-Metadata-") {
-                newReq.Header.Set(name, value)
-            } else {
-                newName := "Grpc-Metadata-" + name // 以 "Grpc-Metadata-" 打头的才能传递给被调服务，这是 go-zero 框架要求
-                newReq.Header.Set(newName, value)
-            }
-        }
-        // 写 cookies
-        for _, authCookie := range authResp.HttpCookies {
-            httpCookie := AuthCookie2HttpCookie(authCookie)
-            newReq.AddCookie(httpCookie)
-        }
-
-        // 往下转发
-        next.ServeHTTP(w, newReq)
+        return authHandleCallSuccess(logCtx, w, r, authResp)
     }
+}
+
+func authHandleCallFailure(logCtx context.Context, w http.ResponseWriter, err error) {
+    var code ErrCode
+    var message string
+
+    // 处理出错码
+    if st, ok := status.FromError(err); ok {
+        code = ErrCode(st.Code())
+        message = st.Message()
+        logc.Errorf(logCtx, "call auth error: (%d) %s", code, message)
+    } else {
+        code = GwErrCallAuth
+        message = "call auth failed"
+        logc.Errorf(logCtx, "%s: %s\n", message, err.Error())
+    }
+
+    // 出错响应
+    logc.Errorf(logCtx, "Call auth failed: %s\n", err.Error())
+    responseBytes, _ := NewResponseStr(logCtx, code, message, "")
+    w.Header().Set("Content-Type", "application/json")
+    w.Write(responseBytes)
+}
+
+func authHandleCallSuccess(logCtx context.Context, w http.ResponseWriter, r *http.Request, authResp *mooonauth.AuthResp) *http.Request {
+    newReq := r.WithContext(r.Context())
+
+    // 写 http 头
+    for name, value := range authResp.HttpHeaders {
+        if strings.HasPrefix(name, "Grpc-Metadata-") {
+            newReq.Header.Set(name, value)
+        } else {
+            newName := "Grpc-Metadata-" + name // 以 "Grpc-Metadata-" 打头的才能传递给被调服务，这是 go-zero 框架要求
+            newReq.Header.Set(newName, value)
+        }
+    }
+    // 写 cookies
+    for _, authCookie := range authResp.HttpCookies {
+        httpCookie := AuthCookie2HttpCookie(authCookie)
+        newReq.AddCookie(httpCookie)
+    }
+
+    return newReq
 }
