@@ -51,9 +51,12 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
             // http cookies
             httpCookies := r.Cookies()
-            for _, httpCookie := range httpCookies {
-                authCookie := HttpCookie2AuthCookie(httpCookie)
-                authReq.HttpCookies[authCookie.Name] = authCookie
+            if len(httpCookies) > 0 {
+                authReq.HttpCookies = make(map[string]*mooon_auth.Cookie)
+                for _, httpCookie := range httpCookies {
+                    authCookie := HttpCookie2AuthCookie(httpCookie)
+                    authReq.HttpCookies[authCookie.Name] = authCookie
+                }
             }
 
             // 调用鉴权服务
