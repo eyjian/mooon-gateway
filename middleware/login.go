@@ -82,7 +82,7 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
                     httpCookie := LoginCookie2HttpCookie(loginCookie)
                     http.SetCookie(w, httpCookie)
                 }
-                
+
                 // 写响应体
                 responseBytes, err := NewResponseStr(logCtx, GwSuccess, "success", loginResp.Body)
                 if err != nil {
