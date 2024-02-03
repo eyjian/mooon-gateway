@@ -50,6 +50,7 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
             loginReq.Body = string(reqBodyBytes)
             loginResp, err := mooonLogin.Login(r.Context(), &loginReq)
             if err != nil {
+                // 登录失败或者出错
                 var code ErrCode
                 var message string
 
@@ -70,32 +71,33 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
                 w.Write(responseBytes)
 
                 return
-            }
-
-            // 写 http 头
-            w.Header().Set("Content-Type", "application/json")
-            for name, value := range loginResp.HttpHeaders {
-                w.Header().Set(name, value)
-            }
-            // 写 cookies
-            for _, loginCookie := range loginResp.HttpCookies {
-                httpCookie := LoginCookie2HttpCookie(loginCookie)
-                http.SetCookie(w, httpCookie)
-            }
-            // 写响应体
-            responseBytes, err := NewResponseStr(logCtx, GwSuccess, "success", loginResp.Body)
-            if err != nil {
-                logc.Errorf(logCtx, "marshal response error: %s (%s)\n", err.Error(), loginResp.Body)
-                responseBytes, _ := NewResponseStr(logCtx, GwInvalidResp, "marshal response error", "")
+            } else { // 登录成功
+                // 写 http 头
                 w.Header().Set("Content-Type", "application/json")
-                w.Write(responseBytes)
-            } else {
-                w.Header().Set("Content-Type", "application/json")
-                _, err = w.Write(responseBytes) // 得放在最后
+                for name, value := range loginResp.HttpHeaders {
+                    w.Header().Set(name, value)
+                }
+                // 写 cookies
+                for _, loginCookie := range loginResp.HttpCookies {
+                    httpCookie := LoginCookie2HttpCookie(loginCookie)
+                    http.SetCookie(w, httpCookie)
+                }
+                
+                // 写响应体
+                responseBytes, err := NewResponseStr(logCtx, GwSuccess, "success", loginResp.Body)
                 if err != nil {
-                    logc.Errorf(logCtx, "write response error: %s\n", err.Error())
+                    logc.Errorf(logCtx, "marshal response error: %s (%s)\n", err.Error(), loginResp.Body)
+                    responseBytes, _ := NewResponseStr(logCtx, GwInvalidResp, "marshal response error", "")
+                    w.Header().Set("Content-Type", "application/json")
+                    w.Write(responseBytes)
                 } else {
-                    w.WriteHeader(http.StatusOK)
+                    w.Header().Set("Content-Type", "application/json")
+                    _, err = w.Write(responseBytes) // 得放在最后
+                    if err != nil {
+                        logc.Errorf(logCtx, "write response error: %s\n", err.Error())
+                    } else {
+                        w.WriteHeader(http.StatusOK)
+                    }
                 }
             }
         }
