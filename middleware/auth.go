@@ -31,11 +31,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
         if !strings.HasPrefix(r.URL.Path, GlobalConfig.Auth.Prefix) {
             next.ServeHTTP(w, r) // 不需要鉴权的请求，往下转发
         } else {
-            newReq := authHandle(logCtx, w, r)
-            if newReq != nil {
-                logc.Infof(logCtx, "auth success: host=%s, path=%s, remote=%s", r.Host, r.URL.Path, r.RemoteAddr)
-                next.ServeHTTP(w, newReq) // 鉴权成功，往下转发
-            }
+            authHandle(next, logCtx, w, r)
         }
     }
 }
@@ -51,9 +47,7 @@ func getAuthClient(logCtx context.Context) (mooonauth.MooonAuth, error) {
     return authClient, nil
 }
 
-func authHandle(logCtx context.Context, w http.ResponseWriter, r *http.Request) *http.Request {
-    var authReq mooon_auth.AuthReq
-
+func authHandle(next http.HandlerFunc, logCtx context.Context, w http.ResponseWriter, r *http.Request) {
     // 实例化鉴权服务
     mooonAuth, err := getAuthClient(logCtx)
     if err != nil {
@@ -62,36 +56,36 @@ func authHandle(logCtx context.Context, w http.ResponseWriter, r *http.Request) 
             w.Header().Set("Content-Type", "application/json")
             w.Write(responseBytes)
         }
-        return nil
-    }
+    } else {
+        var authReq mooon_auth.AuthReq
 
-    // http 头（含了 cookies）
-    if len(r.Header) > 0 {
-        authReq.HttpHeaders = make(map[string]string)
-        for key, values := range r.Header {
-            for _, value := range values { // 实际不应出现这种重复 key 的情况
-                authReq.HttpHeaders[key] = value
+        // http 头（含了 cookies）
+        if len(r.Header) > 0 {
+            authReq.HttpHeaders = make(map[string]string)
+            for key, values := range r.Header {
+                for _, value := range values { // 实际不应出现这种重复 key 的情况
+                    authReq.HttpHeaders[key] = value
+                }
             }
         }
-    }
 
-    // http cookies
-    httpCookies := r.Cookies()
-    if len(httpCookies) > 0 {
-        authReq.HttpCookies = make(map[string]*mooon_auth.Cookie)
-        for _, httpCookie := range httpCookies {
-            authCookie := HttpCookie2AuthCookie(httpCookie)
-            authReq.HttpCookies[authCookie.Name] = authCookie
+        // http cookies
+        httpCookies := r.Cookies()
+        if len(httpCookies) > 0 {
+            authReq.HttpCookies = make(map[string]*mooon_auth.Cookie)
+            for _, httpCookie := range httpCookies {
+                authCookie := HttpCookie2AuthCookie(httpCookie)
+                authReq.HttpCookies[authCookie.Name] = authCookie
+            }
         }
-    }
 
-    // 调用鉴权服务
-    authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
-    if err != nil { // 鉴权失败或者未通过
-        authHandleCallFailure(logCtx, w, err)
-        return nil
-    } else { // 鉴权通过，改写请求以加入（传递）鉴权数据
-        return authHandleCallSuccess(logCtx, w, r, authResp)
+        // 调用鉴权服务
+        authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
+        if err != nil { // 鉴权失败或者未通过
+            authHandleCallFailure(logCtx, w, err)
+        } else { // 鉴权通过，改写请求以加入（传递）鉴权数据
+            authHandleCallSuccess(next, logCtx, w, r, authResp)
+        }
     }
 }
 
@@ -117,11 +111,15 @@ func authHandleCallFailure(logCtx context.Context, w http.ResponseWriter, err er
     w.Write(responseBytes)
 }
 
-func authHandleCallSuccess(logCtx context.Context, w http.ResponseWriter, r *http.Request, authResp *mooonauth.AuthResp) *http.Request {
+func authHandleCallSuccess(next http.HandlerFunc, logCtx context.Context, w http.ResponseWriter, r *http.Request, authResp *mooonauth.AuthResp) {
     newReq := r.WithContext(r.Context())
 
     // 写 http 头
     for name, value := range authResp.HttpHeaders {
+        // 写给调用者的
+        w.Header().Set(name, value)
+
+        // 写个被调服务的
         if strings.HasPrefix(name, "Grpc-Metadata-") {
             newReq.Header.Set(name, value)
         } else {
@@ -129,11 +127,13 @@ func authHandleCallSuccess(logCtx context.Context, w http.ResponseWriter, r *htt
             newReq.Header.Set(newName, value)
         }
     }
+
+    logc.Infof(logCtx, "auth success: host=%s, path=%s, remote=%s", r.Host, r.URL.Path, r.RemoteAddr)
+    next.ServeHTTP(w, newReq) // 鉴权成功，往下转发
+
     // 写 cookies
     for _, authCookie := range authResp.HttpCookies {
         httpCookie := AuthCookie2HttpCookie(authCookie)
-        newReq.AddCookie(httpCookie)
+        http.SetCookie(w, httpCookie)
     }
-
-    return newReq
 }
