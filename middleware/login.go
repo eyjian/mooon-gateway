@@ -59,6 +59,7 @@ func getLoginClient(logCtx context.Context) (mooonlogin.MooonLogin, error) {
 func loginHandle(logCtx context.Context, w http.ResponseWriter, r *http.Request) {
     var loginReq mooon_login.LoginReq
 
+    // 实例化登录服务
     mooonLogin, err := getLoginClient(logCtx)
     if err != nil {
         responseBytes, err := NewResponseStr(logCtx, GwErrConnLogin, "connect login error", "")
