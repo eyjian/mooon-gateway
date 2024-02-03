@@ -64,12 +64,11 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
                     logc.Errorf(logCtx, "%s: %s\n", message, err.Error())
                 }
 
-                // 调用出错响应
-                responseBytes, err := NewResponseStr(logCtx, code, message, "")
-                if err == nil {
-                    w.Header().Set("Content-Type", "application/json")
-                    w.Write(responseBytes)
-                }
+                // 出错响应
+                responseBytes, _ := NewResponseStr(logCtx, code, message, "")
+                w.Header().Set("Content-Type", "application/json")
+                w.Write(responseBytes)
+
                 return
             }
 
@@ -85,10 +84,16 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
             }
             // 写响应体
             responseBytes, err := NewResponseStr(logCtx, GwSuccess, "success", loginResp.Body)
-            if err == nil {
+            if err != nil {
+                logc.Errorf(logCtx, "marshal response error: %s (%s)\n", err.Error(), loginResp.Body)
+                responseBytes, _ := NewResponseStr(logCtx, GwInvalidResp, "marshal response error", "")
+                w.Header().Set("Content-Type", "application/json")
+                w.Write(responseBytes)
+            } else {
+                w.Header().Set("Content-Type", "application/json")
                 _, err = w.Write(responseBytes) // 得放在最后
                 if err != nil {
-                    logc.Errorf(logCtx, "Write response: %s\n", err.Error())
+                    logc.Errorf(logCtx, "write response error: %s\n", err.Error())
                 } else {
                     w.WriteHeader(http.StatusOK)
                 }

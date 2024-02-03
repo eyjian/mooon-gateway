@@ -12,4 +12,5 @@ const (
     GwErrConnAuth  ErrCode = 202400005 // 连接鉴权服务出错
     GwErrCallLogin ErrCode = 202400006 // 调用登录服务出错
     GwErrCallAuth  ErrCode = 202400007 // 调用鉴权服务出错
+    GwInvalidResp  ErrCode = 202400008
 )

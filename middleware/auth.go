@@ -64,36 +64,30 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
                     logc.Errorf(logCtx, "%s: %s\n", message, err.Error())
                 }
 
-                // 调用出错响应
+                // 出错响应
                 logc.Errorf(logCtx, "Call auth failed: %s\n", err.Error())
-                responseBytes, err := NewResponseStr(logCtx, code, message, "")
-                if err == nil {
-                    w.Header().Set("Content-Type", "application/json")
-                    w.Write(responseBytes)
-                    return
-                }
+                responseBytes, _ := NewResponseStr(logCtx, code, message, "")
+                w.Header().Set("Content-Type", "application/json")
+                w.Write(responseBytes)
+
+                return
             }
 
+            // 通过鉴权，改写请求，加入鉴权数据
+            newReq := r.WithContext(r.Context())
+
             // 写 http 头
-            w.Header().Set("Content-Type", "application/json")
             for name, value := range authResp.HttpHeaders {
-                w.Header().Set(name, value)
+                newReq.Header.Set(name, value)
             }
             // 写 cookies
             for _, authCookie := range authResp.HttpCookies {
                 httpCookie := AuthCookie2HttpCookie(authCookie)
-                http.SetCookie(w, httpCookie)
+                newReq.AddCookie(httpCookie)
             }
-            // 写响应体
-            responseBytes, err := NewResponseStr(logCtx, GwSuccess, "success", authResp.Body)
-            if err == nil {
-                _, err = w.Write(responseBytes) // 得放在最后
-                if err != nil {
-                    logc.Errorf(logCtx, "Write response: %s\n", err.Error())
-                } else {
-                    w.WriteHeader(http.StatusOK)
-                }
-            }
+
+            // 往下转发
+            next.ServeHTTP(w, newReq)
         }
     }
 }
