@@ -3,12 +3,12 @@
 package middleware
 
 import (
-	"mooon-gateway/pb/mooon_auth"
-	"net/http"
-	"time"
+    "mooon-gateway/pb/mooon_auth"
+    "net/http"
+    "time"
 )
 import (
-	"mooon-gateway/pb/mooon_login"
+    "mooon-gateway/pb/mooon_login"
 )
 
 func LoginCookie2HttpCookie(loginCookie *mooon_login.Cookie) *http.Cookie {
@@ -37,4 +37,17 @@ func AuthCookie2HttpCookie(authCookie *mooon_auth.Cookie) *http.Cookie {
         HttpOnly: authCookie.HttpOnly,
     }
     return httpCookie
+}
+
+func HttpCookie2AuthCookie(httpCookie *http.Cookie) *mooon_auth.Cookie {
+    return &mooon_auth.Cookie{
+        Name:     httpCookie.Name,
+        Value:    httpCookie.Value,
+        Path:     httpCookie.Path,
+        Domain:   httpCookie.Domain,
+        Expires:  httpCookie.Expires.Unix(),
+        MaxAge:   int32(httpCookie.MaxAge),
+        Secure:   httpCookie.Secure,
+        HttpOnly: httpCookie.HttpOnly,
+    }
 }

@@ -49,6 +49,13 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
                 }
             }
 
+            // http cookies
+            httpCookies := r.Cookies()
+            for _, httpCookie := range httpCookies {
+                authCookie := HttpCookie2AuthCookie(httpCookie)
+                authReq.HttpCookies[authCookie.Name] = authCookie
+            }
+
             // 调用鉴权服务
             authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
             if err != nil { // 鉴权失败或者未通过

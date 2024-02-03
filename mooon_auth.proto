@@ -22,6 +22,7 @@ message Cookie {
 // 鉴权请求消息
 message AuthReq {
   map<string, string> http_headers = 1; // http 头的数据（含了 cookies）
+  map<string, Cookie> http_cookies = 2; // http cookies
 }
 
 // 鉴权响应消息
