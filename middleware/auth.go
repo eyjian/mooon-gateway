@@ -88,7 +88,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
                 // 写 http 头
                 for name, value := range authResp.HttpHeaders {
-                    if strings.HasPrefix(str, "Grpc-Metadata-") {
+                    if strings.HasPrefix(name, "Grpc-Metadata-") {
                         newReq.Header.Set(name, value)
                     } else {
                         newName := "Grpc-Metadata-" + name // 以 "Grpc-Metadata-" 打头的才能传递给被调服务，这是 go-zero 框架要求
