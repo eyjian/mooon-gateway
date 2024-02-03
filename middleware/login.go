@@ -88,10 +88,8 @@ func LoginMiddleware(next http.HandlerFunc) http.HandlerFunc {
                 if err != nil {
                     logc.Errorf(logCtx, "marshal response error: %s (%s)\n", err.Error(), loginResp.Body)
                     responseBytes, _ := NewResponseStr(logCtx, GwInvalidResp, "marshal response error", "")
-                    w.Header().Set("Content-Type", "application/json")
                     w.Write(responseBytes)
                 } else {
-                    w.Header().Set("Content-Type", "application/json")
                     _, err = w.Write(responseBytes) // 得放在最后
                     if err != nil {
                         logc.Errorf(logCtx, "write response error: %s\n", err.Error())
