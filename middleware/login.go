@@ -81,52 +81,64 @@ func loginHandle(logCtx context.Context, w http.ResponseWriter, r *http.Request)
     loginResp, err := mooonLogin.Login(r.Context(), &loginReq)
     if err != nil {
         // 登录失败或者出错
-        var code ErrCode
-        var message string
-
-        // 处理出错码
-        if st, ok := status.FromError(err); ok {
-            code = ErrCode(st.Code())
-            message = st.Message()
-            logc.Errorf(logCtx, "call login error: (%d) %s", code, message)
-        } else {
-            code = GwErrCallLogin
-            message = "call login failed"
-            logc.Errorf(logCtx, "%s: %s\n", message, err.Error())
+        loginHandleCallFailure(logCtx, w, err)
+    } else {
+        // 登录成功
+        if loginHandleCallSuccess(logCtx, w, loginResp) {
+            logc.Infof(logCtx, "login success: host=%s, path=%s, remote=%s", r.Host, r.URL.Path, r.RemoteAddr)
         }
+    }
+}
 
-        // 出错响应
-        responseBytes, _ := NewResponseStr(logCtx, code, message, "")
-        w.Header().Set("Content-Type", "application/json")
+func loginHandleCallFailure(logCtx context.Context, w http.ResponseWriter, err error) {
+    var code ErrCode
+    var message string
+
+    // 处理出错码
+    if st, ok := status.FromError(err); ok {
+        code = ErrCode(st.Code())
+        message = st.Message()
+        logc.Errorf(logCtx, "call login error: (%d) %s", code, message)
+    } else {
+        code = GwErrCallLogin
+        message = "call login failed"
+        logc.Errorf(logCtx, "%s: %s\n", message, err.Error())
+    }
+
+    // 出错响应
+    responseBytes, _ := NewResponseStr(logCtx, code, message, "")
+    w.Header().Set("Content-Type", "application/json")
+    w.Write(responseBytes)
+}
+
+func loginHandleCallSuccess(logCtx context.Context, w http.ResponseWriter, loginResp *mooon_login.LoginResp) bool {
+    // 写 http 头
+    w.Header().Set("Content-Type", "application/json")
+    for name, value := range loginResp.HttpHeaders {
+        w.Header().Set(name, value)
+    }
+
+    // 写 cookies
+    for _, loginCookie := range loginResp.HttpCookies {
+        httpCookie := LoginCookie2HttpCookie(loginCookie)
+        http.SetCookie(w, httpCookie)
+    }
+
+    // 写响应体
+    responseBytes, err := NewResponseStr(logCtx, GwSuccess, "success", loginResp.Body)
+    if err != nil {
+        logc.Errorf(logCtx, "marshal response error: %s (%s)\n", err.Error(), loginResp.Body)
+        responseBytes, _ := NewResponseStr(logCtx, GwInvalidResp, "marshal response error", "")
         w.Write(responseBytes)
-
-        return
-    } else { // 登录成功
-        // 写 http 头
-        w.Header().Set("Content-Type", "application/json")
-        for name, value := range loginResp.HttpHeaders {
-            w.Header().Set(name, value)
-        }
-        // 写 cookies
-        for _, loginCookie := range loginResp.HttpCookies {
-            httpCookie := LoginCookie2HttpCookie(loginCookie)
-            http.SetCookie(w, httpCookie)
-        }
-
-        // 写响应体
-        responseBytes, err := NewResponseStr(logCtx, GwSuccess, "success", loginResp.Body)
+        return false
+    } else {
+        _, err = w.Write(responseBytes) // 得放在最后
         if err != nil {
-            logc.Errorf(logCtx, "marshal response error: %s (%s)\n", err.Error(), loginResp.Body)
-            responseBytes, _ := NewResponseStr(logCtx, GwInvalidResp, "marshal response error", "")
-            w.Write(responseBytes)
+            logc.Errorf(logCtx, "write response error: %s\n", err.Error())
+            return false
         } else {
-            _, err = w.Write(responseBytes) // 得放在最后
-            if err != nil {
-                logc.Errorf(logCtx, "write response error: %s\n", err.Error())
-            } else {
-                w.WriteHeader(http.StatusOK)
-                logc.Infof(logCtx, "login success: host=%s, path=%s, remote=%s", r.Host, r.URL.Path, r.RemoteAddr)
-            }
+            w.WriteHeader(http.StatusOK)
+            return true
         }
     }
 }
