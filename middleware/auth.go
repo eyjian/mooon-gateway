@@ -5,7 +5,6 @@ package middleware
 import (
     "context"
     "google.golang.org/grpc/status"
-    "io"
     "net/http"
     "strings"
 )
@@ -40,14 +39,17 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
                 return
             }
 
-            reqBodyBytes, err := io.ReadAll(r.Body)
-            if err != nil {
-                logc.Errorf(logCtx, "Read request body error: %s\n", err.Error())
-                return
+            // http 头（含了 cookies）
+            if len(r.Header) > 0 {
+                authReq.HttpHeaders = make(map[string]string)
+                for key, values := range r.Header {
+                    for _, value := range values { // 实际不应出现这种重复 key 的情况
+                        authReq.HttpHeaders[key] = value
+                    }
+                }
             }
-            defer r.Body.Close()
 
-            authReq.Body = string(reqBodyBytes)
+            // 调用鉴权服务
             authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
             if err != nil { // 鉴权失败或者未通过
                 var code ErrCode
