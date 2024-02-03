@@ -2,7 +2,7 @@
 
 all: mooon_gateway
 
-mooon_gateway: main.go
+mooon_gateway: main.go middleware/auth.go middleware/login.go
 	go build -o $@ $<
 
 auth: mooon_auth.proto
