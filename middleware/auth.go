@@ -23,7 +23,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         logCtx := logx.ContextWithFields(r.Context(), logx.Field("path", r.URL.Path))
 
-        logc.Debugf(logCtx, "Auth.Prefix: %s, r.URL.Path: %s\n", GlobalConfig.Auth.Prefix, r.URL.Path)
+        logc.Infof(logCtx, "auth request: host=%s, path=%s, remote=%s", r.Host, r.URL.Path, r.RemoteAddr)
         if !strings.HasPrefix(r.URL.Path, GlobalConfig.Auth.Prefix) {
             next.ServeHTTP(w, r) // 不需要鉴权的请求，往下转发
         } else {
