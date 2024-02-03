@@ -50,6 +50,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
             authReq.Body = string(reqBodyBytes)
             authResp, err := mooonAuth.Authenticate(r.Context(), &authReq)
             if err != nil {
+                // 鉴权失败或者未通过
                 var code ErrCode
                 var message string
 
@@ -71,23 +72,23 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
                 w.Write(responseBytes)
 
                 return
-            }
+            } else {
+                // 鉴权通过，改写请求以加入（传递）鉴权数据
+                newReq := r.WithContext(r.Context())
 
-            // 通过鉴权，改写请求，加入鉴权数据
-            newReq := r.WithContext(r.Context())
+                // 写 http 头
+                for name, value := range authResp.HttpHeaders {
+                    newReq.Header.Set(name, value)
+                }
+                // 写 cookies
+                for _, authCookie := range authResp.HttpCookies {
+                    httpCookie := AuthCookie2HttpCookie(authCookie)
+                    newReq.AddCookie(httpCookie)
+                }
 
-            // 写 http 头
-            for name, value := range authResp.HttpHeaders {
-                newReq.Header.Set(name, value)
+                // 往下转发
+                next.ServeHTTP(w, newReq)
             }
-            // 写 cookies
-            for _, authCookie := range authResp.HttpCookies {
-                httpCookie := AuthCookie2HttpCookie(authCookie)
-                newReq.AddCookie(httpCookie)
-            }
-
-            // 往下转发
-            next.ServeHTTP(w, newReq)
         }
     }
 }
