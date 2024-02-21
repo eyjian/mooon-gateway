@@ -11,18 +11,18 @@ Log: # Log conf
   Rotation: size
   Path: log
 
+Etcd:
+  Hosts:
+    - 127.0.0.1:2379
+
 Login: # Login service client conf
   Prefix: /v1
   Etcd:
-    Hosts:
-      - 127.0.0.1:2379
     Key: mooonlogin.rpc
 
 Auth: # Authentication service client conf
   Prefix: /v2
   Etcd:
-    Hosts:
-      - 127.0.0.1:2379
     Key: mooonauth.rpc
 
 Upstreams: # upstreams
