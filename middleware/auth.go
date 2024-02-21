@@ -72,10 +72,9 @@ func authHandle(next http.HandlerFunc, logCtx context.Context, w http.ResponseWr
         // http cookies
         httpCookies := r.Cookies()
         if len(httpCookies) > 0 {
-            authReq.HttpCookies = make(map[string]*mooon_auth.Cookie)
             for _, httpCookie := range httpCookies {
                 authCookie := HttpCookie2AuthCookie(httpCookie)
-                authReq.HttpCookies[authCookie.Name] = authCookie
+                authReq.HttpCookies = append(authReq.HttpCookies, authCookie)
             }
         }
 
