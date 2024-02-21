@@ -12,8 +12,8 @@ var GlobalConfig Config
 
 // Config 网关配置文件
 type Config struct {
-    Etcd                discov.EtcdConf
-    gateway.GatewayConf // 网关配置文件
+    Etcd                discov.EtcdConf `json:",optional,inherit"`
+    gateway.GatewayConf                 // 网关配置文件
 
     Auth struct {
         zrpc.RpcClientConf        // 鉴权服务客户端配置
