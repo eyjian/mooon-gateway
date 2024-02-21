@@ -3,14 +3,16 @@
 package middleware
 
 import (
-	"github.com/zeromicro/go-zero/gateway"
-	"github.com/zeromicro/go-zero/zrpc"
+    "github.com/zeromicro/go-zero/core/discov"
+    "github.com/zeromicro/go-zero/gateway"
+    "github.com/zeromicro/go-zero/zrpc"
 )
 
 var GlobalConfig Config
 
 // Config 网关配置文件
 type Config struct {
+    Etcd                discov.EtcdConf
     gateway.GatewayConf // 网关配置文件
 
     Auth struct {
